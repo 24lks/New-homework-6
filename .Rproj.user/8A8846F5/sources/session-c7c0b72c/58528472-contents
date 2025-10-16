@@ -1,0 +1,261 @@
+---
+title: "HW 6"
+author: "Laurie Short"
+date: "2025-10-15"
+---
+
+---
+title: "Homework 6"
+output: html_document
+date: "2025-10-15"
+---
+
+##Task 1: Conceptual Questions
+
+**1.What is the purpose of the lapply() function? What is the equivalent purrr function?**
+
+The lapply() function applies a function to a list. Map() is the equivalent to lapply() in purrr. 
+
+**2. Suppose we have a list called my_list. Each element of the list is a numeric data frame (all columns are numeric). We want use lapply() to run the code cor(numeric_matrix, method = "kendall") on each element of the list. Write code to do this below! (I’m really trying to ask you how you specify method = "kendall" when calling lapply())**
+
+lapply(my_list, cor, method = "kendall")
+
+**3. What are two advantages of using purrr functions instead of the BaseR apply family?**
+
+Main advantage is more consistency and some helper functions
+
+**4. What is a side-effect function?**
+
+A side-effect function is one of the functions like print, write.csv(), plots, etc.
+
+**5. Why can you name a variable sd in a function and not cause any issues with the sd function?**
+
+When you define a variable in the function it only lives in the function, so it is not trying to do anything globally so it won't mess with the usual sd function.
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+##Task 2 - Writing R Functions
+
+1.Write a basic function (call it getRMSE()) that takes in a vector of responses and a vector of predictions and outputs the RMSE.
+
+```{r}
+getRMSE<-function(responses, predictions, ...){
+  rmse <- sqrt(mean((responses - predictions)^2, ...))
+  return(rmse)
+  } 
+  
+
+```
+
+2.  Run the following code to create some response values and predictions.
+
+```{r}
+set.seed(10)
+n <- 100
+x <- runif(n)
+resp <- 3 + 10 * x + rnorm(n)
+pred <- predict(lm(resp ~ x), data.frame(x))
+
+#Checking RMSE Function
+getRMSE(resp, pred)
+
+# Replace two response values with NA_real_
+resp[2] <- NA_real_
+resp[4] <- NA_real_
+
+# Check if RMSE still works if some values are NA
+
+getRMSE(resp, pred, na.rm = TRUE)
+
+```
+3. Write a function called getMAE() that follows the specifications of the getRMSE() function.
+```{r}
+getMAE<-function(responses, predictions, ...){
+  mae <- mean(abs(responses - predictions), ...)
+  return(mae)
+  } 
+```
+
+4.  Run the following code to create some response values and predictions.
+
+```{r}
+set.seed(10)
+n <- 100
+x <- runif(n)
+resp <- 3 + 10 * x + rnorm(n)
+pred <- predict(lm(resp ~ x), data.frame(x))
+
+#Checking MAE Function
+getMAE(resp, pred)
+
+# Replace two response values with NA_real_
+resp[2] <- NA_real_
+resp[4] <- NA_real_
+
+# Check if RMSE still works if some values are NA
+
+getMAE(resp, pred, na.rm = TRUE)
+
+```
+5. Let’s create a wrapper function that can be used to get either or both metrics returned with a single function call. Do not rewrite your above two functions, call them inside the wrapper function (we would call the getRMSE() and getMAE() functions helper functions). When returning your values, give them appropriate names.
+
+```{r}
+ wrapper<- function(responses, predictions, metrics = c("RMSE", "MAE"), ...) {
+    results <- list() 
+   # --- Check inputs ---
+  if (!(is.vector(responses)) | !(is.atomic(responses)) | !(is.numeric(responses))) {
+    stop("'responses' must be a numeric atomic vector.")
+  }
+  if (!(is.vector(predictions)) | !(is.atomic(predictions)) | !(is.numeric(predictions))) {
+    stop("'predictions' must be a numeric atomic vector.")
+  }
+  if (length(responses) != length(predictions)) {
+    stop("'responses' and 'predictions' must have the same length.")
+  }
+
+  if ("RMSE" %in% metrics) {
+    results$RMSE <- getRMSE(responses, predictions, ...)
+  }
+  if ("MAE" %in% metrics) {
+    results$MAE <- getMAE(responses, predictions, ...)
+  }
+else{
+  results$RMSE <- getRMSE(responses, predictions, ...)
+  results$MAE <- getMAE(responses, predictions, ...)
+}
+    return(results)
+ }
+
+```
+6. Run the following code to create some response values and predictions.
+
+```{r}
+set.seed(10)
+n <- 100
+x <- runif(n)
+resp <- 3 + 10 * x + rnorm(n)
+pred <- predict(lm(resp ~ x), data.frame(x))
+
+#Checking MAE only
+wrapper(resp, pred, metrics="MAE")
+
+#Checking RSME only
+wrapper(resp, pred, metrics="RSME")
+
+#Checking both
+wrapper(resp, pred, metrics = c("RMSE", "MAE"))
+
+#Checking if no metric is specifiied
+wrapper(resp, pred)
+
+
+# Replace two response values with NA_real_
+resp[2] <- NA_real_
+resp[4] <- NA_real_
+
+# Check if wrapper still works if some values are NA
+
+#Checking MAE only
+wrapper(resp, pred, metrics="MAE", na.rm = TRUE)
+
+#Checking RSME only
+wrapper(resp, pred, metrics="RSME", na.rm = TRUE)
+
+#Checking both
+wrapper(resp, pred, metrics = c("RMSE", "MAE"), na.rm = TRUE)
+
+#Checking if no metric is specified
+wrapper(resp, pred, na.rm = TRUE)
+
+
+#Checking passing someting it should not get
+
+responses_df <- data.frame(3, 5, 2.5, 7)
+predictions_df <- data.frame(2.5, 5, 4, 8)
+
+try(wrapper(responses_df, predictions_df))
+```
+##Task 3 - Practice with purrr
+
+1. Pull out the coefficients list element using $, coef(), and the pluck() function from purrr
+
+```{r}
+library(purrr)
+iris<-iris
+lm_fit1 <- lm(Sepal.Length ~ Sepal.Width + Species, data = iris)
+print(lm_fit1)
+
+#Getting coefficients with $
+lm_fit1$coefficients
+#Getting coefficients with coef
+coef(lm_fit1)
+#Getting coefficients with coef
+pluck(lm_fit1, "coefficients")
+
+
+```
+2. Let’s fit a number of different models with the code below!
+
+```{r}
+lm_fit2 <- lm(Sepal.Length ~ Sepal.Width, data = iris)
+lm_fit3 <- lm(Sepal.Length ~ Petal.Width + Sepal.Width + Species, data = iris)
+lm_fit4 <- lm(Sepal.Length ~ Petal.Width + Petal.Length + Sepal.Width + Species,
+data = iris)
+fits <- list(lm_fit1, lm_fit2, lm_fit3, lm_fit4)
+
+#Now let’s use the purrr::map() function to pull out the coefficients of each model fit from the fits object (using pluck!).
+
+map(fits, pluck, "coefficients")
+```
+
+3. There is a function called confint() that creates confidence intervals for the coefficients in an lm() fit. We apply that function directly to the fitted object like this:
+
+```{r}
+confint(lm_fit1)
+
+#Use map() to apply the confint() function to each model fit in the fits object
+
+map(fits, confint)
+```
+4. Next, let’s create histograms of the residuals in each model fit! Run the code here to set up a 2x2 plotting window.
+
+```{r}
+par(mfrow = c(1, 1))
+
+#Now, pull out the residual vectors (the resid elements of your fits) using map(). Then use the walk() function with hist to create plots.
+
+# Extract residuals from each model in the fits list
+
+resids <- map(fits, resid)
+
+#use walk for the histogram
+
+walk(resids, hist)
+
+```
+5. That was cool! However, the names stink... Let’s try to fix that! On the list that is created from the
+map() function used on the resid element, use the purrr::set_names() function to give the names
+“fit1”, “fit2”, “fit3”, and “fit4” to the list elements.
+
+```{r}
+par(mfrow = c(1, 1))
+
+names_resid<-set_names(resids, c("fit1", "fit2", "fit3", "fit4"))
+
+help(imap)
+
+iwalk(names_resid, \(x, idx) hist(x, main = idx))
+```
